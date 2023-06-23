@@ -9,6 +9,7 @@ const client = new Client({
         IntentsBitField.Flags.GuildMembers,
         IntentsBitField.Flags.GuildMessages,
         IntentsBitField.Flags.MessageContent,
+        IntentsBitField.Flags.GuildMessageReactions
     ]
 });
 
@@ -80,12 +81,44 @@ function sendEventMessage(channel, title, description, location, date, time, dea
       Title: ${title}\nDescription: ${description}\nLocation: ${location}\nDate: ${date}\nTime: ${time}\nDeadline: ${deadline}
     `)
       .then((sentMessage) => {
+        console.log("STARTED COLLECTING REACTIONS")
+        const collectorFilter = (reaction) => ['👍', '👎'].includes(reaction.emoji.name);
+        const collector = sentMessage.createReactionCollector({filter: collectorFilter, time: 10000});
+
+        collector.on('collect', (reaction, user) => {
+            console.log(`Collected reaction ${reaction.emoji.name} from ${user.tag}`);
+        });
+
+        // TESTING PURPOSES START
         sentMessage.react('👍');
         sentMessage.react('👎');
+        // TESTING END
+
+        collector.on('end', collected => {
+            sendReactionCount(channel, collected)
+        });
+
       })
       .catch((error) => {
         console.log('error', error);
       });
+  }
+
+  /*
+   * After the voting has ended, sendReactionCount() will count the
+   * amount of thumbs-up and thumbs-down and return it.
+   * 
+   * TODO: check if each user only voted ONCE.
+  */
+  function sendReactionCount(channel, collected) {
+    // console.log(collected)
+    // console.log(`UNIQUE Reactions #: ${collected.size}`)
+
+    let upCount = collected.get('👍').count
+    let downCount = collected.get('👎').count
+
+    channel.send(`HERE ARE THE RESULTS:`)
+    channel.send(`Accepted: ${upCount}, Rejected: ${downCount}`)
   }
   
 
